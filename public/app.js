@@ -270,8 +270,7 @@ function createEmptyTile() {
     const tile = document.createElement('div');
     tile.className = 'tile tile--empty';
     tile.innerHTML = `
-      <div class="empty-tile-icon">♡</div>
-      <div class="empty-tile-hint">Enable broadcast mode<br>on your Garmin device</div>
+      <div class="empty-tile-hint">Waiting for athlete</div>
     `;
     addEmptyDragHandlers(tile);
     return tile;
@@ -354,9 +353,6 @@ function updateTile(tile, device) {
     const hrEl = tile.querySelector('.tile-hr-value');
     if (hrEl) hrEl.textContent = device.hr != null ? device.hr : '--';
 
-    const pctEl = tile.querySelector('.tile-hr-pct');
-    if (pctEl) pctEl.textContent = device.hr && device.maxHr ? Math.round(device.hr / device.maxHr * 100) + '%' : '';
-
     const trendEl = tile.querySelector('.tile-trend');
     if (trendEl) {
         const ICONS = { rising: '↑', falling: '↓', stable: '→', unknown: '·' };
@@ -398,6 +394,43 @@ function updateTile(tile, device) {
         const maxHrVal = tile.querySelector('.meta-maxhr-value');
         if (maxHrVal) maxHrVal.textContent = device.maxHr ? String(device.maxHr) : 'Set';
     }
+
+    updateMaxHrBanner(tile, device);
+}
+
+// ── Max HR exceedance banner ──────────────────────────────────────────────────
+function updateMaxHrBanner(tile, device) {
+    const banner = tile.querySelector('.tile-maxhr-alert');
+    if (!banner) return;
+
+    // Hide if: no maxHr set, no HR reading, within bounds, or currently editing
+    if (!device.maxHr || !device.hr || device.hr <= device.maxHr
+        || editingMaxHrDeviceId === device.deviceId) {
+        banner.hidden = true;
+        banner.innerHTML = '';
+        delete banner.dataset.proposed;
+        return;
+    }
+
+    // Already showing this exact proposed value — don't recreate the button
+    if (parseInt(banner.dataset.proposed || '0', 10) === device.hr) return;
+
+    banner.dataset.proposed = device.hr;
+    banner.hidden = false;
+    banner.innerHTML = `
+        <span class="maxhr-alert-text">&#9888; ${escHtml(String(device.hr))} bpm exceeds max HR (${escHtml(String(device.maxHr))})</span>
+        <button class="maxhr-alert-btn">Update to ${escHtml(String(device.hr))}</button>
+    `;
+    banner.querySelector('.maxhr-alert-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newMax = device.hr;
+        saveMaxHr(device.deviceId, newMax);
+        banner.hidden = true;
+        banner.innerHTML = '';
+        delete banner.dataset.proposed;
+        const maxHrVal = tile.querySelector('.meta-maxhr-value');
+        if (maxHrVal) maxHrVal.textContent = String(newMax);
+    });
 }
 
 function tileHTML(device) {
@@ -431,15 +464,17 @@ function tileHTML(device) {
       <span class="tile-signal">${signalHTML(device.lastSeen, device.rssi)}</span>
     </div>
     <div class="tile-hr">
-      <span class="tile-hr-value">${hr}</span>
-      <div class="tile-hr-aside">
-        <span class="tile-hr-unit">bpm</span>
-        <span class="tile-hr-pct">${device.hr && device.maxHr ? Math.round(device.hr / device.maxHr * 100) + '%' : ''}</span>
-        ${trendHTML(device.deviceId)}
+      <div class="tile-hr-body">
+        <span class="tile-hr-label">&#9829; bpm</span>
+        <div class="tile-hr-row">
+          <span class="tile-hr-value">${hr}</span>
+          ${trendHTML(device.deviceId)}
+        </div>
       </div>
     </div>
     <div class="${zoneLabelClass}">${escHtml(zoneLabelText)}</div>
     <span class="tile-stale-label">${isStale ? 'No signal' : ''}</span>
+    <div class="tile-maxhr-alert" hidden></div>
     <div class="tile-meta">
       <span class="meta-item"><span class="meta-label">ID</span> ${escHtml(String(device.deviceId))}</span>
       ${batteryHTML}
