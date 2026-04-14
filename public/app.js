@@ -10,6 +10,31 @@ let editingDeviceId = null;
 let editingMaxHrDeviceId = null;
 let zoneModel = localStorage.getItem('zoneModel') || '6zone';
 let tileOrder = JSON.parse(localStorage.getItem('tileOrder') || '[]');
+let targetZoneNum = JSON.parse(localStorage.getItem('targetZone-' + (localStorage.getItem('zoneModel') || '6zone')) ?? 'null');
+
+function setTargetZone(num) {
+    targetZoneNum = num;
+    if (num === null) {
+        localStorage.removeItem('targetZone-' + zoneModel);
+    } else {
+        localStorage.setItem('targetZone-' + zoneModel, JSON.stringify(num));
+    }
+    renderTargetZonePicker();
+    render();
+}
+
+function clearTargetZone() {
+    targetZoneNum = null;
+    localStorage.removeItem('targetZone-' + zoneModel);
+}
+
+function getCompliance(zone) {
+    if (targetZoneNum === null) return null;
+    if (!zone) return 'unknown';
+    if (zone.zoneNum === targetZoneNum) return 'on-target';
+    if (zone.zoneNum > targetZoneNum) return 'above';
+    return 'below';
+}
 
 function saveTileOrder() {
     tileOrder = [...grid.querySelectorAll('.tile[data-id]')].map((t) => t.dataset.id);
@@ -112,11 +137,12 @@ fetch('/api/devices')
     .catch(() => { render(); });
 
 document.body.dataset.zoneModel = zoneModel;
-// Sync toggle button active state once DOM is ready
+// Sync toggle button active state and render target zone picker once DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.zone-toggle-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.model === zoneModel);
     });
+    renderTargetZonePicker();
 });
 connectWS();
 render(); // show empty slots immediately on load
@@ -341,7 +367,12 @@ function updateTile(tile, device) {
 
     const zoneLabelEl = tile.querySelector('.tile-zone-label');
     if (zoneLabelEl) {
-        if (zone) {
+        if (targetZoneNum !== null) {
+            const compliance = getCompliance(zone);
+            const COMPLIANCE_TEXT = { 'on-target': 'On Target', above: '↑ Too High', below: '↓ Too Low', unknown: '' };
+            zoneLabelEl.textContent = compliance ? COMPLIANCE_TEXT[compliance] : '';
+            zoneLabelEl.className = compliance ? `tile-zone-label compliance-label--${compliance}` : 'tile-zone-label';
+        } else if (zone) {
             zoneLabelEl.textContent = zone.label;
             zoneLabelEl.className = `tile-zone-label zone-label--z${zone.cssIdx}`;
         } else {
@@ -376,9 +407,17 @@ function tileHTML(device) {
     const zone = getZone(device.hr, device.maxHr);
     const maxHrDisplay = device.maxHr ? String(device.maxHr) : 'Set';
 
-    // C (Copywriting): zone label is enough — no separate badge
-    const zoneLabelText = zone !== null ? zone.label : '';
-    const zoneLabelClass = zone !== null ? `tile-zone-label zone-label--z${zone.cssIdx}` : 'tile-zone-label';
+    // Zone label: compliance text when target active, zone name otherwise
+    let zoneLabelText, zoneLabelClass;
+    if (targetZoneNum !== null) {
+        const compliance = getCompliance(zone);
+        const COMPLIANCE_TEXT = { 'on-target': 'On Target', above: '↑ Too High', below: '↓ Too Low', unknown: '' };
+        zoneLabelText = compliance ? COMPLIANCE_TEXT[compliance] : '';
+        zoneLabelClass = compliance ? `tile-zone-label compliance-label--${compliance}` : 'tile-zone-label';
+    } else {
+        zoneLabelText = zone !== null ? zone.label : '';
+        zoneLabelClass = zone !== null ? `tile-zone-label zone-label--z${zone.cssIdx}` : 'tile-zone-label';
+    }
 
     // C (Copywriting): only show battery if we have a real reading
     const bt = batteryText(device);
@@ -551,25 +590,26 @@ function batteryText(device) {
 }
 
 // ── Zone logic ────────────────────────────────────────────────────────────────
-// Returns { cssIdx, label } or null.
-// cssIdx maps to existing zone--zN CSS classes; label is the display string.
+// Returns { cssIdx, zoneNum, label } or null.
+// cssIdx maps to existing zone--zN CSS classes.
+// zoneNum is the display-facing zone number for target comparison.
 function getZone(hr, maxHr) {
     if (!hr || !maxHr) return null;
     const pct = hr / maxHr;
     if (zoneModel === 'phlex') {
         // Phlex 4-zone model (thresholds: Aerobic ~70%, Anaerobic ~90%; Z0 below 50%)
-        if (pct >= 0.90) return { cssIdx: 5, label: 'Zone 3 · High Intensity' };
-        if (pct >= 0.70) return { cssIdx: 3, label: 'Zone 2 · Threshold' };
-        if (pct >= 0.50) return { cssIdx: 1, label: 'Zone 1 · Aerobic Base' };
-        return { cssIdx: 0, label: 'Zone 0 · Rest' };
+        if (pct >= 0.90) return { cssIdx: 5, zoneNum: 3, label: 'Zone 3 · High Intensity' };
+        if (pct >= 0.70) return { cssIdx: 3, zoneNum: 2, label: 'Zone 2 · Threshold' };
+        if (pct >= 0.50) return { cssIdx: 1, zoneNum: 1, label: 'Zone 1 · Aerobic Base' };
+        return { cssIdx: 0, zoneNum: 0, label: 'Zone 0 · Rest' };
     } else {
         // Classic 6-zone model
-        if (pct >= 0.90) return { cssIdx: 5, label: 'Zone 5 · Max Effort' };
-        if (pct >= 0.80) return { cssIdx: 4, label: 'Zone 4 · Threshold' };
-        if (pct >= 0.70) return { cssIdx: 3, label: 'Zone 3 · Tempo' };
-        if (pct >= 0.60) return { cssIdx: 2, label: 'Zone 2 · Base' };
-        if (pct >= 0.50) return { cssIdx: 1, label: 'Zone 1 · Recovery' };
-        return { cssIdx: 0, label: 'Zone 0 · Rest' };
+        if (pct >= 0.90) return { cssIdx: 5, zoneNum: 5, label: 'Zone 5 · Max Effort' };
+        if (pct >= 0.80) return { cssIdx: 4, zoneNum: 4, label: 'Zone 4 · Threshold' };
+        if (pct >= 0.70) return { cssIdx: 3, zoneNum: 3, label: 'Zone 3 · Tempo' };
+        if (pct >= 0.60) return { cssIdx: 2, zoneNum: 2, label: 'Zone 2 · Base' };
+        if (pct >= 0.50) return { cssIdx: 1, zoneNum: 1, label: 'Zone 1 · Recovery' };
+        return { cssIdx: 0, zoneNum: 0, label: 'Zone 0 · Rest' };
     }
 }
 
@@ -580,12 +620,45 @@ function setZoneModel(model) {
     document.querySelectorAll('.zone-toggle-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.model === model);
     });
+    clearTargetZone();
+    renderTargetZonePicker();
     render();
+}
+
+function renderTargetZonePicker() {
+    const picker = document.getElementById('target-zone-picker');
+    if (!picker) return;
+    const zoneCount = zoneModel === 'phlex' ? 4 : 6; // Z0–Z3 or Z0–Z5
+    const buttons = [];
+
+    // Off button
+    const offBtn = document.createElement('button');
+    offBtn.className = 'zone-toggle-btn' + (targetZoneNum === null ? ' active' : '');
+    offBtn.textContent = 'Off';
+    offBtn.onclick = () => setTargetZone(null);
+    buttons.push(offBtn);
+
+    // One button per zone
+    for (let i = 0; i < zoneCount; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'zone-toggle-btn' + (targetZoneNum === i ? ' active' : '');
+        btn.textContent = `Z${i}`;
+        btn.onclick = () => setTargetZone(i);
+        buttons.push(btn);
+    }
+
+    picker.replaceChildren(...buttons);
 }
 
 function updateTileZone(tile, zone) {
     tile.classList.remove('zone--z0', 'zone--z1', 'zone--z2', 'zone--z3', 'zone--z4', 'zone--z5');
-    if (zone !== null) tile.classList.add(`zone--z${zone.cssIdx}`);
+    tile.classList.remove('compliance--on-target', 'compliance--above', 'compliance--below', 'compliance--unknown');
+    if (targetZoneNum !== null) {
+        const compliance = getCompliance(zone);
+        if (compliance) tile.classList.add(`compliance--${compliance}`);
+    } else if (zone !== null) {
+        tile.classList.add(`zone--z${zone.cssIdx}`);
+    }
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────

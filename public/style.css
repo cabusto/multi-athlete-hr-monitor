@@ -42,6 +42,8 @@ header {
     justify-content: space-between;
     padding: 16px 24px;
     border-bottom: 1px solid var(--border);
+    gap: 24px;
+    flex-wrap: wrap;
 }
 
 header h1 {
@@ -50,6 +52,28 @@ header h1 {
     color: var(--text-secondary);
     letter-spacing: 0.05em;
     text-transform: uppercase;
+}
+
+.header-controls {
+    display: flex;
+    gap: 24px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.header-control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.control-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    opacity: 0.6;
 }
 
 .dongle-status {
@@ -421,7 +445,56 @@ padding-bottom: 4px;
 
 /* Max       - red    */
 
-/* Zone badge */
+/* ── Compliance mode ─────────────────────────────────────── */
+/* Tiles stay neutral (no background tint) — only left border + HR number colored */
+
+.tile.compliance--on-target {
+    border-left: 5px solid #22c55e;
+}
+
+.tile.compliance--above {
+    border-left: 5px solid #ef4444;
+}
+
+.tile.compliance--below {
+    border-left: 5px solid #60a5fa;
+}
+
+.tile.compliance--unknown {
+    border-left: 5px solid #333;
+}
+
+/* HR number colors in compliance mode */
+.tile.compliance--on-target .tile-hr-value {
+    color: #22c55e;
+}
+
+.tile.compliance--above .tile-hr-value {
+    color: #ef4444;
+}
+
+.tile.compliance--below .tile-hr-value {
+    color: #60a5fa;
+}
+
+.tile.compliance--unknown .tile-hr-value {
+    color: var(--hr-color);
+}
+
+/* Zone label compliance text */
+.tile-zone-label.compliance-label--on-target {
+    color: #22c55e;
+}
+
+.tile-zone-label.compliance-label--above {
+    color: #ef4444;
+}
+
+.tile-zone-label.compliance-label--below {
+    color: #60a5fa;
+}
+
+
 .zone-badge {
     font-size: 0.72rem;
     font-weight: 800;
