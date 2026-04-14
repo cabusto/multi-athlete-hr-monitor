@@ -1,0 +1,566 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #0d0d0d;
+    --surface: #1a1a1a;
+    --surface-stale: #111;
+    --border: #2a2a2a;
+    --border-stale: #1e1e1e;
+    --text-primary: #f0f0f0;
+    --text-secondary: #888;
+    --text-stale: #444;
+    --hr-color: #e8e8e8;
+    --hr-stale: #383838;
+    --name-color: #ffffff;
+    --accent: #4a9eff;
+    --warning: #ff6b35;
+    --stale-label: #555;
+}
+
+html,
+body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.dongle-status {
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 6px;
+    background: #2a1a1a;
+    color: var(--warning);
+    border: 1px solid #4a2a2a;
+}
+
+.dongle-status.hidden {
+    display: none;
+}
+
+/* ── Zone model toggle ───────────────────────────────────── */
+.zone-toggle {
+    display: flex;
+    gap: 4px;
+}
+
+.zone-toggle-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 5px 13px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.zone-toggle-btn:hover {
+    border-color: #555;
+    color: var(--text-primary);
+}
+
+.zone-toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+main {
+    padding: 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.empty-state {
+    text-align: center;
+    margin-top: 80px;
+    color: var(--text-secondary);
+}
+
+.empty-state p {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+}
+
+.empty-state .hint {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.empty-state.hidden {
+    display: none;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* ── Athlete Tile ────────────────────────────────────────── */
+
+.tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: opacity 0.3s, border-color 0.3s;
+    min-height: 0;
+    overflow: hidden;
+    container-type: size;
+}
+
+.tile.stale {
+    opacity: 0.45;
+    border-color: var(--border-stale);
+}
+
+/* Empty / waiting tile */
+.tile--empty {
+    background: transparent;
+    border-style: dashed;
+    border-color: #222;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    opacity: 0.5;
+}
+
+.tile--empty .empty-tile-icon {
+    font-size: clamp(1rem, 14cqh, 2rem);
+    color: #444;
+}
+
+.tile--empty .empty-tile-hint {
+    font-size: clamp(0.65rem, 5cqh, 0.85rem);
+    color: #444;
+    text-align: center;
+    line-height: 1.5;
+    max-width: 80%;
+}
+
+/* Name row */
+.tile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tile-name {
+    font-size: clamp(0.9rem, 8cqh, 1.6rem);
+    font-weight: 700;
+    color: var(--name-color);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    border-bottom: 1px dashed transparent;
+    transition: border-color 0.15s;
+}
+
+.tile-name:hover {
+    border-bottom-color: var(--accent);
+}
+
+.tile-name-input {
+    font-size: clamp(0.9rem, 8cqh, 1.6rem);
+    font-weight: 700;
+    color: var(--name-color);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+}
+
+/* HR — L (Layout): flex:1 claims all remaining vertical space in the tile */
+.tile-hr {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 4px;
+}
+
+/* E (Emphasis): large number commands the tile; colored per zone when active */
+.tile-hr-value {
+    font-size: clamp(2rem, 35cqh, 8rem);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--hr-color);
+    letter-spacing: -3px;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.4s;
+}
+
+.tile.stale .tile-hr-value {
+    color: var(--hr-stale);
+}
+
+/* E (Emphasis): HR number takes on zone accent color for immediate recognition */
+.tile.zone--z0 .tile-hr-value {
+    color: #9ca3af;
+}
+
+.tile.zone--z1 .tile-hr-value {
+    color: #60a5fa;
+}
+
+.tile.zone--z2 .tile-hr-value {
+    color: #4ade80;
+}
+
+.tile.zone--z3 .tile-hr-value {
+    color: #facc15;
+}
+
+.tile.zone--z4 .tile-hr-value {
+    color: #fb923c;
+}
+
+.tile.zone--z5 .tile-hr-value {
+    color: #f87171;
+}
+
+.tile-hr-unit {
+    font-size: clamp(0.6rem, 5cqh, 1rem);
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.tile-hr-aside {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding-bottom: 6px;
+}
+
+.tile-hr-pct {
+    font-size: clamp(0.6rem, 5cqh, 1rem);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.tile-trend {
+    font-size: clamp(0.65rem, 5cqh, 1.1rem);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tile-trend--rising {
+    color: #f87171;
+}
+
+.tile-trend--falling {
+    color: #60a5fa;
+}
+
+.tile-trend--stable {
+    color: #4ade80;
+}
+
+.tile-trend--unknown {
+    color: #444;
+}
+
+padding-bottom: 4px;
+}
+
+/* Stale label */
+.tile-stale-label {
+    font-size: 0.75rem;
+    color: var(--stale-label);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: none;
+}
+
+.tile.stale .tile-stale-label {
+    display: block;
+}
+
+/* Meta row (Device ID, type, battery) */
+.tile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: auto;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+.tile.stale .tile-meta {
+    border-top-color: var(--border-stale);
+}
+
+.meta-item {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 4px;
+}
+
+.meta-label {
+    color: #555;
+}
+
+/* ── Zone backgrounds (cool → hot) ──────────────────────── */
+/* Bold left-border accent + tinted background make zones clearly legible */
+
+.tile.zone--z0 {
+    background: #161616;
+    border-color: #333;
+    border-left: 5px solid #6b7280;
+}
+
+/* Rest       - grey  */
+.tile.zone--z1 {
+    background: #0e2338;
+    border-color: #1e4d8c;
+    border-left: 5px solid #3b82f6;
+}
+
+/* Recovery  - blue   */
+.tile.zone--z2 {
+    background: #0a2318;
+    border-color: #1a5232;
+    border-left: 5px solid #22c55e;
+}
+
+/* Base      - green  */
+.tile.zone--z3 {
+    background: #242300;
+    border-color: #504e00;
+    border-left: 5px solid #eab308;
+}
+
+/* Tempo     - yellow */
+.tile.zone--z4 {
+    background: #2e1500;
+    border-color: #6e3d00;
+    border-left: 5px solid #f97316;
+}
+
+/* Threshold - orange */
+.tile.zone--z5 {
+    background: #2e0808;
+    border-color: #6e1414;
+    border-left: 5px solid #ef4444;
+}
+
+/* Max       - red    */
+
+/* Zone badge */
+.zone-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+.zone-badge--z0 {
+    background: #333;
+    color: #9ca3af;
+}
+
+.zone-badge--z1 {
+    background: #1c3d5a;
+    color: #7ec8e3;
+}
+
+.zone-badge--z2 {
+    background: #1a4230;
+    color: #6fcf97;
+}
+
+.zone-badge--z3 {
+    background: #3e4212;
+    color: #d4df6a;
+}
+
+.zone-badge--z4 {
+    background: #542e10;
+    color: #f2994a;
+}
+
+.zone-badge--z5 {
+    background: #6e1414;
+    color: #eb5757;
+}
+
+/* Zone label under HR number */
+.tile-zone-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-top: -8px;
+    /* pull up closer to HR number */
+}
+
+.tile-zone-label.zone-label--z0 {
+    color: #9ca3af;
+}
+
+.tile-zone-label.zone-label--z1 {
+    color: #3b82f6;
+}
+
+.tile-zone-label.zone-label--z2 {
+    color: #22c55e;
+}
+
+.tile-zone-label.zone-label--z3 {
+    color: #eab308;
+}
+
+.tile-zone-label.zone-label--z4 {
+    color: #f97316;
+}
+
+.tile-zone-label.zone-label--z5 {
+    color: #ef4444;
+}
+
+/* Max HR meta value - clickable to edit */
+.meta-maxhr-value {
+    cursor: pointer;
+    border-bottom: 1px dashed #444;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.meta-maxhr-value:hover {
+    border-bottom-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.meta-maxhr-input {
+    font-size: 0.75rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    outline: none;
+    width: 48px;
+}
+
+/* ── Signal strength indicator ─────────────────────────────────────────────── */
+.signal {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.signal-bar {
+    width: 4px;
+    border-radius: 1px;
+    background: #333;
+    transition: background 0.4s;
+}
+
+.signal-bar:nth-child(1) {
+    height: 4px;
+}
+
+.signal-bar:nth-child(2) {
+    height: 7px;
+}
+
+.signal-bar:nth-child(3) {
+    height: 10px;
+}
+
+.signal-bar:nth-child(4) {
+    height: 14px;
+}
+
+.signal[data-strength="4"] .signal-bar {
+    background: #22c55e;
+}
+
+.signal[data-strength="3"] .signal-bar:nth-child(-n+3) {
+    background: #22c55e;
+}
+
+.signal[data-strength="2"] .signal-bar:nth-child(-n+2) {
+    background: #eab308;
+}
+
+.signal[data-strength="1"] .signal-bar:nth-child(1) {
+    background: #ef4444;
+}
+
+.signal[data-strength="0"] .signal-bar {
+    background: #333;
+}
+
+.signal-age {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    align-self: center;
+}
+
+/* align name row items to center so signal bars sit flush */
+.tile-name-row {
+    align-items: center;
+}
+
+.tile-signal {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    flex-shrink: 0;
+}

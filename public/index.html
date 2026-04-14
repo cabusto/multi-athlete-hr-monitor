@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HR Monitor</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <header>
+        <h1>Heart Rate Monitor</h1>
+        <div class="zone-toggle">
+            <button class="zone-toggle-btn" data-model="6zone" onclick="setZoneModel('6zone')">6-Zone</button>
+            <button class="zone-toggle-btn" data-model="phlex" onclick="setZoneModel('phlex')">Phlex 3-Zone</button>
+        </div>
+        <div id="dongle-status" class="dongle-status hidden"></div>
+    </header>
+
+    <main>
+        <div id="empty-state" class="empty-state hidden">
+            <p>No devices detected.</p>
+            <p class="hint">Power on ANT+ heart rate monitors near the dongle.</p>
+        </div>
+        <div id="grid" class="grid"></div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
