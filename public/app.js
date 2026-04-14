@@ -9,6 +9,35 @@ let dongleConnected = false;
 let editingDeviceId = null;
 let editingMaxHrDeviceId = null;
 let zoneModel = localStorage.getItem('zoneModel') || '6zone';
+let tileOrder = JSON.parse(localStorage.getItem('tileOrder') || '[]');
+
+function saveTileOrder() {
+    tileOrder = [...grid.querySelectorAll('.tile[data-id]')].map((t) => t.dataset.id);
+    localStorage.setItem('tileOrder', JSON.stringify(tileOrder));
+}
+
+function insertAtOrderedPosition(tile, deviceId) {
+    // Ensure deviceId is in tileOrder; if not, append it
+    if (!tileOrder.includes(deviceId)) {
+        tileOrder.push(deviceId);
+        localStorage.setItem('tileOrder', JSON.stringify(tileOrder));
+    }
+    const myIdx = tileOrder.indexOf(deviceId);
+    // Find the first real tile already in the DOM whose order index comes after ours
+    const realTiles = [...grid.querySelectorAll('.tile[data-id]')];
+    const after = realTiles.find((t) => tileOrder.indexOf(t.dataset.id) > myIdx);
+    if (after) {
+        grid.insertBefore(tile, after);
+    } else {
+        // Place before the first empty slot, or append
+        const firstEmpty = grid.querySelector('.tile--empty');
+        if (firstEmpty) {
+            grid.insertBefore(tile, firstEmpty);
+        } else {
+            grid.appendChild(tile);
+        }
+    }
+}
 
 // ── HR history (trend) ────────────────────────────────────────────────────────
 const hrHistory = new Map(); // deviceId → [{ ts, hr }, ...]
@@ -181,12 +210,7 @@ function render() {
         // Only move tile in the DOM when newly created — moving an existing tile
         // removes and re-inserts it, which fires blur on any focused input inside it.
         if (isNew) {
-            const firstEmpty = grid.querySelector('.tile--empty');
-            if (firstEmpty) {
-                grid.insertBefore(tile, firstEmpty);
-            } else {
-                grid.appendChild(tile);
-            }
+            insertAtOrderedPosition(tile, device.deviceId);
         }
     });
 
@@ -212,6 +236,7 @@ function createTile(device) {
     tile.innerHTML = tileHTML(device);
     updateTileZone(tile, getZone(device.hr, device.maxHr));
     bindTileEvents(tile, device);
+    addDragHandlers(tile);
     return tile;
 }
 
@@ -222,7 +247,69 @@ function createEmptyTile() {
       <div class="empty-tile-icon">♡</div>
       <div class="empty-tile-hint">Enable broadcast mode<br>on your Garmin device</div>
     `;
+    addEmptyDragHandlers(tile);
     return tile;
+}
+
+// ── Drag-and-drop reordering ──────────────────────────────────────────────────
+let draggedTile = null;
+
+function addDragHandlers(tile) {
+    tile.draggable = true;
+
+    // Prevent child elements from being independently draggable (e.g. text spans)
+    tile.querySelectorAll('*').forEach((el) => { el.draggable = false; });
+
+    tile.addEventListener('dragstart', (e) => {
+        // Ensure we're dragging the tile, not a child text node
+        e.dataTransfer.setDragImage(tile, 0, 0);
+        draggedTile = tile;
+        // Defer adding class so the drag image is captured before opacity changes
+        requestAnimationFrame(() => tile.classList.add('dragging'));
+        e.dataTransfer.effectAllowed = 'move';
+    });
+
+    tile.addEventListener('dragend', () => {
+        draggedTile = null;
+        tile.classList.remove('dragging');
+        grid.querySelectorAll('.drag-over').forEach((t) => t.classList.remove('drag-over'));
+    });
+
+    tile.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (tile !== draggedTile) tile.classList.add('drag-over');
+    });
+
+    tile.addEventListener('dragleave', () => {
+        tile.classList.remove('drag-over');
+    });
+
+    tile.addEventListener('drop', (e) => {
+        e.preventDefault();
+        tile.classList.remove('drag-over');
+        if (!draggedTile || draggedTile === tile) return;
+        grid.insertBefore(draggedTile, tile);
+        saveTileOrder();
+    });
+}
+
+function addEmptyDragHandlers(tile) {
+    tile.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        tile.classList.add('drag-over');
+    });
+
+    tile.addEventListener('dragleave', () => {
+        tile.classList.remove('drag-over');
+    });
+
+    tile.addEventListener('drop', (e) => {
+        e.preventDefault();
+        tile.classList.remove('drag-over');
+        if (!draggedTile) return;
+        grid.insertBefore(draggedTile, tile);
+        saveTileOrder();
+    });
 }
 
 function updateTile(tile, device) {
