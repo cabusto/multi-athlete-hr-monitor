@@ -691,10 +691,15 @@ function setZoneModel(model) {
     render();
 }
 
+const ZONE_NAMES = {
+    '6zone': ['Recovery', 'Aerobic', 'Base', 'Tempo', 'Thresh'],
+    phlex: ['Recovery', 'Aerobic', 'Thresh'],
+};
+
 function renderTargetZonePicker() {
     const picker = document.getElementById('target-zone-picker');
     if (!picker) return;
-    const zoneCount = zoneModel === 'phlex' ? 4 : 6; // Z0–Z3 or Z0–Z5
+    const names = ZONE_NAMES[zoneModel] || ZONE_NAMES['6zone'];
     const buttons = [];
 
     // Off button
@@ -705,13 +710,13 @@ function renderTargetZonePicker() {
     buttons.push(offBtn);
 
     // One button per zone
-    for (let i = 0; i < zoneCount; i++) {
+    names.forEach((name, i) => {
         const btn = document.createElement('button');
         btn.className = 'zone-toggle-btn' + (targetZoneNum === i ? ' active' : '');
-        btn.textContent = `Z${i}`;
+        btn.textContent = name;
         btn.onclick = () => setTargetZone(i);
         buttons.push(btn);
-    }
+    });
 
     picker.replaceChildren(...buttons);
 }
