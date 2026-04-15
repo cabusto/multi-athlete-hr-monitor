@@ -5,16 +5,21 @@ const path = require('path');
 
 const MAPPINGS_FILE = path.join(__dirname, '../../device-mappings.json');
 
+let _cache = null;
+
 function load() {
+    if (_cache) return _cache;
     try {
         const raw = fs.readFileSync(MAPPINGS_FILE, 'utf8');
-        return JSON.parse(raw);
+        _cache = JSON.parse(raw);
     } catch {
-        return {};
+        _cache = {};
     }
+    return _cache;
 }
 
 function save(map) {
+    _cache = map;
     fs.writeFileSync(MAPPINGS_FILE, JSON.stringify(map, null, 2), 'utf8');
 }
 
@@ -67,4 +72,4 @@ function getMaxHr(deviceId) {
     return _entry(map[String(deviceId)]).maxHr;
 }
 
-module.exports = { load, save, setName, setMaxHr, getName, getMaxHr };
+module.exports = { setName, setMaxHr, getName, getMaxHr };

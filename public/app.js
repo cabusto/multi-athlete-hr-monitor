@@ -112,7 +112,8 @@ function connectWS() {
     const ws = new WebSocket(WS_URL);
 
     ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
+        let msg;
+        try { msg = JSON.parse(event.data); } catch { return; }
 
         if (msg.type === 'update') {
             dongleConnected = msg.dongleConnected;
@@ -124,6 +125,8 @@ function connectWS() {
             renderDongleStatus(msg.message);
         }
     };
+
+    ws.onerror = (err) => { console.warn('[WS] error', err.message); };
 
     ws.onclose = () => {
         setTimeout(connectWS, 3000);

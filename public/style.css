@@ -358,9 +358,6 @@ main {
     color: transparent;
 }
 
-padding-bottom: 4px;
-}
-
 /* Stale label */
 .tile-stale-label {
     font-size: 0.75rem;
