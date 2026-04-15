@@ -36,8 +36,25 @@ function getCompliance(zone) {
     return 'below';
 }
 
-// No arrows — trend arrow carries direction; badge carries settlement status
-const COMPLIANCE_TEXT = { 'on-target': '✓ On Target', above: 'High', below: 'Low', unknown: '' };
+// Returns the bpm boundaries [lo, hi) of the current target zone for a given maxHr.
+function getTargetZoneBpmBounds(maxHr) {
+    if (!maxHr || targetZoneNum === null) return null;
+    const thresholds = zoneModel === 'phlex'
+        ? [0, 0.50, 0.70, 0.90, 1.0]           // Z0–Z3
+        : [0, 0.50, 0.60, 0.70, 0.80, 0.90, 1.0]; // Z0–Z5
+    const lo = Math.round(thresholds[targetZoneNum] * maxHr);
+    const hi = Math.round(thresholds[targetZoneNum + 1] * maxHr);
+    return { lo, hi };
+}
+
+// Builds the badge label, appending a bpm delta for above/below states.
+function complianceBadgeText(compliance, hr, maxHr) {
+    if (compliance === 'on-target') return '✓ On Target';
+    const bounds = getTargetZoneBpmBounds(maxHr);
+    if (!bounds || !hr) return compliance === 'above' ? 'High' : 'Low';
+    if (compliance === 'above') return `High (+${hr - bounds.hi} bpm)`;
+    return `Low (-${bounds.lo - hr} bpm)`;
+}
 
 function saveTileOrder() {
     tileOrder = [...grid.querySelectorAll('.tile[data-id]')].map((t) => t.dataset.id);
@@ -373,7 +390,7 @@ function updateTile(tile, device) {
         const compliance = targetZoneNum !== null ? getCompliance(zone) : null;
         const show = compliance && compliance !== 'unknown';
         badgeEl.hidden = !show;
-        badgeEl.textContent = show ? COMPLIANCE_TEXT[compliance] : '';
+        badgeEl.textContent = show ? complianceBadgeText(compliance, device.hr, device.maxHr) : '';
         badgeEl.className = compliance
             ? `tile-compliance-badge compliance-badge--${compliance}`
             : 'tile-compliance-badge';
