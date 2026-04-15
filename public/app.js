@@ -36,6 +36,9 @@ function getCompliance(zone) {
     return 'below';
 }
 
+// No arrows — trend arrow carries direction; badge carries settlement status
+const COMPLIANCE_TEXT = { 'on-target': '✓ On Target', above: 'High', below: 'Low', unknown: '' };
+
 function saveTileOrder() {
     tileOrder = [...grid.querySelectorAll('.tile[data-id]')].map((t) => t.dataset.id);
     localStorage.setItem('tileOrder', JSON.stringify(tileOrder));
@@ -361,14 +364,22 @@ function updateTile(tile, device) {
         trendEl.className = `tile-trend tile-trend--${state}`;
     }
 
+    // Update compliance badge
+    const badgeEl = tile.querySelector('.tile-compliance-badge');
+    if (badgeEl) {
+        const compliance = targetZoneNum !== null ? getCompliance(zone) : null;
+        const show = compliance && compliance !== 'unknown';
+        badgeEl.hidden = !show;
+        badgeEl.textContent = show ? COMPLIANCE_TEXT[compliance] : '';
+        badgeEl.className = compliance
+            ? `tile-compliance-badge compliance-badge--${compliance}`
+            : 'tile-compliance-badge';
+    }
+
+    // Zone label: zone name in identity mode, hidden in compliance mode
     const zoneLabelEl = tile.querySelector('.tile-zone-label');
     if (zoneLabelEl) {
-        if (targetZoneNum !== null) {
-            const compliance = getCompliance(zone);
-            const COMPLIANCE_TEXT = { 'on-target': 'On Target', above: '↑ Too High', below: '↓ Too Low', unknown: '' };
-            zoneLabelEl.textContent = compliance ? COMPLIANCE_TEXT[compliance] : '';
-            zoneLabelEl.className = compliance ? `tile-zone-label compliance-label--${compliance}` : 'tile-zone-label';
-        } else if (zone) {
+        if (targetZoneNum === null && zone) {
             zoneLabelEl.textContent = zone.label;
             zoneLabelEl.className = `tile-zone-label zone-label--z${zone.cssIdx}`;
         } else {
@@ -440,17 +451,16 @@ function tileHTML(device) {
     const zone = getZone(device.hr, device.maxHr);
     const maxHrDisplay = device.maxHr ? String(device.maxHr) : 'Set';
 
-    // Zone label: compliance text when target active, zone name otherwise
-    let zoneLabelText, zoneLabelClass;
-    if (targetZoneNum !== null) {
-        const compliance = getCompliance(zone);
-        const COMPLIANCE_TEXT = { 'on-target': 'On Target', above: '↑ Too High', below: '↓ Too Low', unknown: '' };
-        zoneLabelText = compliance ? COMPLIANCE_TEXT[compliance] : '';
-        zoneLabelClass = compliance ? `tile-zone-label compliance-label--${compliance}` : 'tile-zone-label';
-    } else {
-        zoneLabelText = zone !== null ? zone.label : '';
-        zoneLabelClass = zone !== null ? `tile-zone-label zone-label--z${zone.cssIdx}` : 'tile-zone-label';
-    }
+    // Compliance badge (shown when target zone active, hidden otherwise)
+    const compliance = targetZoneNum !== null ? getCompliance(zone) : null;
+    const badgeText = compliance ? COMPLIANCE_TEXT[compliance] : '';
+    const badgeClass = compliance ? `tile-compliance-badge compliance-badge--${compliance}` : 'tile-compliance-badge';
+    const badgeHidden = !compliance || compliance === 'unknown';
+
+    // Zone label: zone name in identity mode, hidden in compliance mode (badge takes over)
+    const zoneLabelText = targetZoneNum === null && zone !== null ? zone.label : '';
+    const zoneLabelClass = targetZoneNum === null && zone !== null
+        ? `tile-zone-label zone-label--z${zone.cssIdx}` : 'tile-zone-label';
 
     // C (Copywriting): only show battery if we have a real reading
     const bt = batteryText(device);
@@ -463,6 +473,7 @@ function tileHTML(device) {
       <span class="tile-name" title="Click to rename">${escHtml(displayName)}</span>
       <span class="tile-signal">${signalHTML(device.lastSeen, device.rssi)}</span>
     </div>
+    <div class="${badgeClass}"${badgeHidden ? ' hidden' : ''}>${escHtml(badgeText)}</div>
     <div class="tile-hr">
       <div class="tile-hr-body">
         <span class="tile-hr-label">&#9829; bpm</span>
